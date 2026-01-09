@@ -19,17 +19,28 @@ function sellWeight(r, sellStart, ladder) {
 }
 
 /**
- * Target weight with re-entry logic:
- * - if r >= sellStart: use sell ladder
- * - else: re-entry depends on mode:
- *    instant: 100%
- *    wait: only 100% if r <= buyTh, otherwise HOLD (no buying)
- *    gradual: move gradually back to 100% depending on how far r dropped under sellStart (buyTh not used)
+ * Target weight with re-entry logic + SELL-ONLY hysteresis:
+ *
+ * SELL REGIME (r >= sellStart):
+ *   - IMPORTANT FIX: only allow SELLs, no BUY-backs while still in sell regime.
+ *   - That means: target = min(prevW, ladderTarget)
+ *
+ * RE-ENTRY (r < sellStart):
+ *   - instant: jump to 100%
+ *   - wait: only 100% if r <= buyTh, otherwise HOLD (no buying)
+ *   - gradual: move gradually back to 100% depending on how far r dropped under sellStart (buyTh not used)
  */
 function targetWeight(prevW, r, buyTh, sellStart, ladder, reentryMode) {
-  if (r >= sellStart) return sellWeight(r, sellStart, ladder);
+  // --- SELL REGIME ---
+  if (r >= sellStart) {
+    const wL = sellWeight(r, sellStart, ladder);
 
-  // Below sellStart => re-entry zone
+    // FIX: sell-only hysteresis in sell regime (no re-buys on pullbacks above sellStart)
+    // This makes the BTC weight "verharren" at the minimum reached, until r drops below sellStart.
+    return Math.min(prevW, wL);
+  }
+
+  // --- Below sellStart => re-entry zone ---
   if (reentryMode === "instant") return 1.0;
 
   if (reentryMode === "wait") {
@@ -116,10 +127,8 @@ function renderRatioDistributionSinceStart({ ratioSeries, currentRatio, startDat
     margin: { l: 48, r: 18, t: 22, b: 38 },
     font: { size: 11, color: "rgba(255,255,255,.85)" },
     bargap: 0.05,
-    xaxis: { title: "Kanal-Position (%)", range: [0, 100], dtick: 10, showgrid: true, gridcolor: "rgba(255,255,255,.06)",
-      tickfont: { color: "rgba(255,255,255,.70)" } },
-    yaxis: { title: "Häufigkeit", showgrid: true, gridcolor: "rgba(255,255,255,.08)", zerolinecolor: "rgba(255,255,255,.10)",
-      tickfont: { color: "rgba(255,255,255,.70)" } },
+    xaxis: { title: "Kanal-Position (%)", range: [0, 100], dtick: 10, showgrid: true, gridcolor: "rgba(255,255,255,.06)", tickfont: { color: "rgba(255,255,255,.70)" } },
+    yaxis: { title: "Häufigkeit", showgrid: true, gridcolor: "rgba(255,255,255,.08)", zerolinecolor: "rgba(255,255,255,.10)", tickfont: { color: "rgba(255,255,255,.70)" } },
     shapes, annotations
   }, { responsive: true, displayModeBar: false, displaylogo: false });
 }
@@ -130,7 +139,7 @@ function renderExposureVsRatioChart({ sellStart, ladder, rNow, wNow, reentryMode
     ladder === "g0" ? "g0 (1-x²)" :
     ladder === "g2" ? "g2 ((1-x)²)" : "g1 (1-x)";
 
-  if (hintEl) hintEl.textContent = `Sell ≥ ${sellStart} → Leiter ${ladderLabel} | Re-Entry: ${reentryMode}`;
+  if (hintEl) hintEl.textContent = `Sell ≥ ${sellStart} → Leiter ${ladderLabel} | Sell-only im Sell-Regime | Re-Entry: ${reentryMode}`;
 
   const xs = [];
   const ys = [];
@@ -151,12 +160,9 @@ function renderExposureVsRatioChart({ sellStart, ladder, rNow, wNow, reentryMode
     plot_bgcolor: "rgba(0,0,0,0)",
     margin: { l: 48, r: 18, t: 10, b: 35 },
     font: { size: 11, color: "rgba(255,255,255,.85)" },
-    legend: { orientation: "h", x: 0, y: 1.18, xanchor: "left", yanchor: "top", bgcolor: "rgba(0,0,0,0)",
-      font: { size: 10, color: "rgba(255,255,255,.78)" } },
-    xaxis: { title: "Kanal-Position / Ratio (%)", range: [0, 100], showgrid: true, gridcolor: "rgba(255,255,255,.06)",
-      tickfont: { color: "rgba(255,255,255,.70)" } },
-    yaxis: { title: "BTC-Exposure (%)", range: [0, 100], showgrid: true, gridcolor: "rgba(255,255,255,.08)",
-      zerolinecolor: "rgba(255,255,255,.10)", tickfont: { color: "rgba(255,255,255,.70)" } },
+    legend: { orientation: "h", x: 0, y: 1.18, xanchor: "left", yanchor: "top", bgcolor: "rgba(0,0,0,0)", font: { size: 10, color: "rgba(255,255,255,.78)" } },
+    xaxis: { title: "Kanal-Position / Ratio (%)", range: [0, 100], showgrid: true, gridcolor: "rgba(255,255,255,.06)", tickfont: { color: "rgba(255,255,255,.70)" } },
+    yaxis: { title: "BTC-Exposure (%)", range: [0, 100], showgrid: true, gridcolor: "rgba(255,255,255,.08)", zerolinecolor: "rgba(255,255,255,.10)", tickfont: { color: "rgba(255,255,255,.70)" } },
     shapes: [
       { type: "line", x0: sellStart, x1: sellStart, y0: 0, y1: 100, line: { color: "rgba(255,255,255,.22)", width: 1, dash: "dash" } }
     ]
@@ -328,16 +334,16 @@ export function initStrategyUI({ data, COLORS, lastPeak, lastTrough }) {
 
       if (reentryMode === "wait") {
         const buyPrice0 = priceForRatioPct(buyTh, lastTrough, lastPeak);
-        nextTriggerBuyEl.textContent = `BUY: 100% @ Ratio ${fmtNumber(buyTh)}`;
+        nextTriggerBuyEl.textContent = `RE-ENTRY: 100% @ Ratio ${fmtNumber(buyTh)}`;
         nextTriggerBuySubEl.textContent = `Preis-Schätzung (heutiger Kanal): ${buyPrice0 == null ? "-" : fmtUSD(buyPrice0)} — erst bei BuyTh wieder voll.`;
       } else if (reentryMode === "gradual") {
         const rDown = clamp(Math.floor(rNow - 1e-9), 0, 100);
         const buyPrice = priceForRatioPct(rDown, lastTrough, lastPeak);
-        nextTriggerBuyEl.textContent = `UP: höhere BTC-Quote @ Ratio ${fmtNumber(rDown)}`;
-        nextTriggerBuySubEl.textContent = `Preis-Schätzung (heutiger Kanal): ${buyPrice == null ? "-" : fmtUSD(buyPrice)} — bei fallender Ratio wird schrittweise hochgekauft.`;
+        nextTriggerBuyEl.textContent = `RE-ENTRY: höher @ Ratio ${fmtNumber(rDown)}`;
+        nextTriggerBuySubEl.textContent = `Preis-Schätzung (heutiger Kanal): ${buyPrice == null ? "-" : fmtUSD(buyPrice)} — schrittweise hochkaufen.`;
       } else {
-        nextTriggerBuyEl.textContent = "BUY: unter SellStart = 100%";
-        nextTriggerBuySubEl.textContent = "Instant Re-Entry: unter SellStart bleibt die Zielquote 100%.";
+        nextTriggerBuyEl.textContent = "RE-ENTRY: unter SellStart = 100%";
+        nextTriggerBuySubEl.textContent = "Instant: unter SellStart bleibt Zielquote 100%.";
       }
     } else {
       const rUp = clamp(Math.ceil(rNow + 1e-9), sellStart, 100);
@@ -347,13 +353,13 @@ export function initStrategyUI({ data, COLORS, lastPeak, lastTrough }) {
 
       if (reentryMode === "wait") {
         const buyPrice0 = priceForRatioPct(buyTh, lastTrough, lastPeak);
-        nextTriggerBuyEl.textContent = `BUY: 100% erst @ Ratio ${fmtNumber(buyTh)}`;
-        nextTriggerBuySubEl.textContent = `Preis-Schätzung (heutiger Kanal): ${buyPrice0 == null ? "-" : fmtUSD(buyPrice0)} — unter SellStart wird NICHT sofort gekauft.`;
+        nextTriggerBuyEl.textContent = `RE-ENTRY: 100% erst @ Ratio ${fmtNumber(buyTh)}`;
+        nextTriggerBuySubEl.textContent = `Preis-Schätzung (heutiger Kanal): ${buyPrice0 == null ? "-" : fmtUSD(buyPrice0)} — oberhalb SellStart wird NICHT zurückgekauft.`;
       } else if (reentryMode === "gradual") {
-        nextTriggerBuyEl.textContent = `UP: unter SellStart schrittweise hoch`;
-        nextTriggerBuySubEl.textContent = `Wenn Ratio unter ${fmtNumber(sellStart)} fällt, wird in Stufen hochgekauft (Gradual).`;
+        nextTriggerBuyEl.textContent = `RE-ENTRY: unter SellStart schrittweise hoch`;
+        nextTriggerBuySubEl.textContent = `Erst wenn Ratio unter ${fmtNumber(sellStart)} fällt, wird hochgekauft (Gradual).`;
       } else {
-        nextTriggerBuyEl.textContent = `BUY: unter SellStart sofort 100%`;
+        nextTriggerBuyEl.textContent = `RE-ENTRY: unter SellStart sofort 100%`;
         nextTriggerBuySubEl.textContent = `Wenn Ratio unter ${fmtNumber(sellStart)} fällt, springt die Quote direkt auf 100% (Instant).`;
       }
     }
@@ -420,11 +426,9 @@ export function initStrategyUI({ data, COLORS, lastPeak, lastTrough }) {
       plot_bgcolor: "rgba(0,0,0,0)",
       margin: { l: 45, r: 45, t: 10, b: 30 },
       font: { size: 11, color: "rgba(255,255,255,.85)" },
-      legend: { orientation: "h", x: 0, y: 1.12, xanchor: "left", yanchor: "top", bgcolor: "rgba(0,0,0,0)",
-        font: { size: 10, color: "rgba(255,255,255,.78)" } },
+      legend: { orientation: "h", x: 0, y: 1.12, xanchor: "left", yanchor: "top", bgcolor: "rgba(0,0,0,0)", font: { size: 10, color: "rgba(255,255,255,.78)" } },
       xaxis: { showgrid: true, gridcolor: "rgba(255,255,255,.06)", tickfont: { color: "rgba(255,255,255,.70)" } },
-      yaxis:  { title: "BTC %", range: [0, 100], showgrid: true, gridcolor: "rgba(255,255,255,.08)", zerolinecolor: "rgba(255,255,255,.10)",
-        tickfont: { color: "rgba(255,255,255,.70)" } },
+      yaxis:  { title: "BTC %", range: [0, 100], showgrid: true, gridcolor: "rgba(255,255,255,.08)", zerolinecolor: "rgba(255,255,255,.10)", tickfont: { color: "rgba(255,255,255,.70)" } },
       yaxis2: { title: "Value (rel.)", overlaying: "y", side: "right", showgrid: false, tickfont: { color: "rgba(255,255,255,.70)" } }
     };
 
