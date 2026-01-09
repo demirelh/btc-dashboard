@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>BTC Dashboard</title>
+  <script src="https://cdn.plot.ly/plotly-2.30.0.min.js"></script>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; padding: 12px; }
+    #meta { margin: 0 0 10px 0; opacity: 0.85; }
+    #chart { width: 100%; height: 92vh; }
+
+    /* Mobile: mehr Platz */
+    @media (max-width: 700px) {
+      body { padding: 10px; }
+      #chart { height: 135vh; } /* 3 Reihen statt 4 -> weniger nötig */
+    }
+  </style>
+</head>
+<body>
+  <h3 style="margin: 0 0 6px 0;">BTC Dashboard</h3>
+  <div id="meta">Lade Daten…</div>
+  <div id="chart"></div>
+
+  <script>
+    function fmtNumber(n) {
+      try { return Number(n).toLocaleString(undefined, { maximumFractionDigits: 2 }); }
+      catch { return String(n); }
+    }
+    function fmtDateTimeLocal(d) {
+      return d.toLocaleString(undefined, {
+        year: "numeric", month: "2-digit", day: "2-digit",
+        hour: "2-digit", minute: "2-digit", second: "2-digit"
+      });
+    }
+
+    async function main() {
+      const isMobile = window.matchMedia("(max-width: 700px)").matches;
+
+      const res = await fetch("./data/btc.json", { cache: "no-store" });
+      const data = await res.json();
+
+      const d = data.series.date;
+      const price = data.series.price;
+      const fair = data.series.fair;
+      const log10r = data.series.log10_r;
+      const ratio = data.series.ratio;
+
+      const de = data.extended.date;
+      const fairExt = data.extended.fair;
+      const peakLine = data.extended.peak_line_price;
+      const troughLine = data.extended.trough_line_price;
+      const peakLog = data.extended.peak_line_log10;
+      const troughLog = data.extended.trough_line_log10;
+
+      // --- Meta-Info anzeigen ---
+      const metaEl = document.getElementById("meta");
+      const lastDate = d?.length ? d[d.length - 1] : "unbekannt";
+      const lastPrice = price?.length ? price[price.length - 1] : null;
+
+      const updatedUtcRaw = data.meta?.updated_utc || null;
+      const updatedUtc = updatedUtcRaw ? new Date(updatedUtcRaw) : null;
+      const updatedLocal = updatedUtc ? fmtDateTimeLocal(updatedUtc) : "unbekannt";
+
+      metaEl.textContent =
+        `Letzte Aktualisierung: ${updatedLocal}` +
+        ` | Datenstand: ${lastDate}` +
+        (lastPrice !== null ? ` | Letzter Preis: ${fmtNumber(lastPrice)} USD` : "");
+
+      // --- NEU: 1. Plot entfernt, 3. Plot nach oben geschoben -> jetzt 3 Reihen ---
+      // Reihenfolge:
+      // 1) Preis + Fair + Peak/Trough Preislinien (ehemals Plot 3)
+      // 2) log10(R) + LS-Linien
+      // 3) Ratio (%)
+
+      const traces = [
+        // Row 1: Preis + Fair + Linien
+        { x: d,  y: price,     name: "BTC Preis",          mode: "lines", xaxis: "x",  yaxis: "y",  showlegend: true },
+        { x: d,  y: fair,      name: "Fair (orig)",        mode: "lines", xaxis: "x",  yaxis: "y",  showlegend: true },
+        { x: de, y: fairExt,   name: "Fair (ext)",         mode: "lines", xaxis: "x",  yaxis: "y",  showlegend: true },
+        { x: de, y: peakLine,  name: "Peak Line (Preis)",  mode: "lines", xaxis: "x",  yaxis: "y",  showlegend: true },
+        { x: de, y: troughLine,name: "Trough Line (Preis)",mode: "lines", xaxis: "x",  yaxis: "y",  showlegend: true },
+
+        // Row 2: log10(R)
+        { x: d,  y: log10r,    name: "log10(R)",           mode: "lines", xaxis: "x2", yaxis: "y2", showlegend: true },
+        { x: de, y: peakLog,   name: "Peak LS (log10)",    mode: "lines", xaxis: "x2", yaxis: "y2", showlegend: true },
+        { x: de, y: troughLog, name: "Trough LS (log10)",  mode: "lines", xaxis: "x2", yaxis: "y2", showlegend: true },
+
+        // Row 3: Ratio
+        { x: d,  y: ratio,     name: "Kanal-Position (%)", mode: "lines", xaxis: "x3", yaxis: "y3", showlegend: true },
+      ];
+
+      const layout = {
+        margin: isMobile
+          ? { l: 46, r: 10, t: 10, b: 80 }
+          : { l: 50, r: 20, t: 10, b: 70 },
+
+        font: { size: isMobile ? 11 : 12 },
+
+        legend: {
+          orientation: "h",
+          x: 0,
+          y: -0.25,
+          xanchor: "left",
+          yanchor: "top",
+          font: { size: isMobile ? 10 : 11 },
+          bgcolor: "rgba(0,0,0,0)"
+        },
+
+        grid: { rows: 3, columns: 1, pattern: "independent", roworder: "top to bottom" },
+
+        // Y-Achsen
+        yaxis:  { title: "Preis", automargin: true },
+        yaxis2: { title: "log10(R)", automargin: true },
+        yaxis3: { title: "Position (%)", range: [0, 100], automargin: true },
+
+        // X-Achsen koppeln (Zoom/Pan synced)
+        xaxis:  { showticklabels: false },
+        xaxis2: { matches: "x", showticklabels: false },
+        xaxis3: {
+          matches: "x",
+          title: "Datum",
+          showticklabels: true,
+          rangeslider: { visible: !isMobile }
+        },
+
+        // Standard: Pan (bewegen)
+        dragmode: "pan",
+      };
+
+      const config = {
+        responsive: true,
+        scrollZoom: true,
+        displaylogo: false,
+        displayModeBar: true
+      };
+
+      Plotly.newPlot("chart", traces, layout, config);
+      window.addEventListener("resize", () => Plotly.Plots.resize("chart"));
+    }
+
+    main();
+  </script>
+</body>
+</html>

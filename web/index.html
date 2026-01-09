@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>BTC Dashboard</title>
+  <script src="https://cdn.plot.ly/plotly-2.30.0.min.js"></script>
+  <link rel="stylesheet" href="./css/styles.css">
+</head>
+
+<body>
+  <div class="container">
+
+    <!-- TOP -->
+    <div class="topbar">
+      <div class="title-wrap">
+        <h3 class="title">
+          <span class="dot" aria-hidden="true"></span>
+          BTC Dashboard
+          <span class="badge">Live</span>
+          <span class="chip"><span class="c"></span> Fair / Kanal</span>
+        </h3>
+        <div id="meta">Lade Daten…</div>
+      </div>
+
+      <div class="controls">
+        <button id="btnUpdate" class="btn" type="button" title="Startet update.py über /api/update">
+          <span class="spinner" aria-hidden="true"></span>
+          <span class="dot" aria-hidden="true"></span>
+          Update jetzt
+        </button>
+        <span id="updateStatus"></span>
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="kpis">
+      <div class="kpi">
+        <div class="label">Preis</div>
+        <div id="kpiPrice" class="value">-</div>
+        <div id="kpiPriceSub" class="sub">Tagesschlusskurs (Close)</div>
+        <div id="kpiLive" class="sub">Live: -</div>
+      </div>
+      <div class="kpi">
+        <div class="label">Kanal-Position</div>
+        <div id="kpiRatio" class="value">-</div>
+        <div id="kpiRatioSub" class="sub">-</div>
+      </div>
+      <div class="kpi">
+        <div class="label">Datenstand</div>
+        <div id="kpiDate" class="value">-</div>
+        <div id="kpiDateSub" class="sub">-</div>
+      </div>
+      <div class="kpi">
+        <div class="label">Letztes Update</div>
+        <div id="kpiUpdated" class="value">-</div>
+        <div id="kpiUpdatedSub" class="sub">UTC → Lokal</div>
+      </div>
+    </div>
+
+    <!-- EXPLAIN / HERLEITUNG -->
+    <div class="card strategy" style="padding: 12px 14px;">
+      <div class="strategy-head" style="margin-bottom: 8px;">
+        <div class="strategy-title">
+          Herleitung: Wie kommt die Kanal-Position zustande?
+          <span class="pill">Preis → Kanal → Ratio → Zielquote</span>
+        </div>
+      </div>
+
+      <div style="font-size:12px; color: var(--muted2); line-height:1.45; margin-bottom:10px;">
+        <b>Idee:</b> Der BTC-Preis wird im <b>Peak/Trough-Kanal</b> eingeordnet. Daraus entsteht die
+        <b>Kanal-Position (Ratio)</b> von <b>0–100%</b>.
+        <br/>
+        <span id="explainNowLine">Jetzt: –</span>
+      </div>
+
+      <details open class="subcard" style="margin-top:0;">
+        <summary style="cursor:pointer; user-select:none; color: var(--muted); font-size:12px; margin-bottom:8px;">
+          Chart anzeigen (Preis + Kanal + Ratio)
+        </summary>
+        <!-- WICHTIG: chart ist jetzt HIER (nicht mehr unten nochmal), damit die Herleitung oben ist -->
+        <div id="chart" style="width:100%; height: 68vh; min-height: 520px;"></div>
+      </details>
+
+      <div class="mini" style="margin-top:12px;">
+        <div class="m">
+          <div class="k">Was bedeutet Ratio?</div>
+          <div class="v">0% = Trough</div>
+          <div class="k" style="margin-top:4px;">100% = Peak | 50% = Mitte</div>
+        </div>
+        <div class="m">
+          <div class="k">Regime-Logik</div>
+          <div id="explainRegime" class="v">–</div>
+          <div id="explainRegimeSub" class="k" style="margin-top:4px;">–</div>
+        </div>
+        <div class="m">
+          <div class="k">Warum Zielquote?</div>
+          <div id="explainWhy" class="v">–</div>
+          <div id="explainWhySub" class="k" style="margin-top:4px;">–</div>
+        </div>
+        <div class="m">
+          <div class="k">Nächster Schritt</div>
+          <div id="explainNext" class="v">–</div>
+          <div id="explainNextSub" class="k" style="margin-top:4px;">–</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STRATEGY -->
+    <div class="card strategy">
+      <div class="strategy-head">
+        <div class="strategy-title">
+          Rebalancing Empfehlung
+          <span id="pillLabel" class="pill">sell46 | reentry: instant</span>
+        </div>
+        <button id="btnApply" class="btn secondary" type="button">Anwenden</button>
+      </div>
+
+      <div class="grid2">
+        <!-- LEFT: Controls -->
+        <div>
+          <div class="formrow">
+            <div class="field">
+              <label>Strategie (Sell-Leiter)</label>
+              <select id="strategySelect">
+                <option value="g0">g0 (soft: 1 - x²)</option>
+                <option value="g1" selected>g1 (linear: 1 - x)</option>
+                <option value="g2">g2 (aggressiv: (1 - x)²)</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label>Startdatum</label>
+              <input id="startDate" type="date" value="2018-01-01"/>
+            </div>
+
+            <div class="field">
+              <label>Start BTC-Quote (%)</label>
+              <input id="startWeight" type="number" min="0" max="100" step="1" value="100"/>
+            </div>
+
+            <div class="field">
+              <label>Sell Start (ratio ≥)</label>
+              <input id="sellStart" type="number" min="0" max="100" step="1" value="46"/>
+            </div>
+
+            <div class="field">
+              <label>Re-Entry (nach Sell-Regime)</label>
+              <select id="reentryMode">
+                <option value="instant" selected>Instant (unter SellStart → direkt 100%)</option>
+                <option value="wait">Wait (erst bei BuyTh wieder 100%)</option>
+                <option value="gradual">Gradual (unter SellStart schrittweise hochkaufen)</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label>Buy Threshold (ratio ≤)</label>
+              <input id="buyTh" type="number" min="0" max="100" step="1" value="14"/>
+              <div id="buyHint" class="hint">Wird nur im Modus „Wait“ genutzt.</div>
+            </div>
+          </div>
+
+          <div class="helptext">
+            Logik: Wenn ratio ≥ SellStart → Sell-Leiter (g0/g1/g2). Wenn ratio wieder fällt (Re-Entry):
+            je nach Modus entweder sofort 100%, oder warten bis BuyTh, oder schrittweise hochkaufen.
+          </div>
+        </div>
+
+        <!-- RIGHT: Recommendation -->
+        <div class="actionBox">
+          <div class="actionTop">
+            <div class="actionMain">
+              <span id="recWeight">-</span>
+            </div>
+            <span id="recTag" class="tag hold">-</span>
+          </div>
+          <div id="recAction" class="actionSub">-</div>
+        </div>
+      </div>
+
+      <!-- MINI TILES -->
+      <div class="mini">
+        <div class="m">
+          <div class="k">Nächster Trigger</div>
+
+          <div id="nextTriggerSell" class="v">-</div>
+          <div id="nextTriggerSellSub" class="k" style="margin-top:4px;">-</div>
+
+          <div style="height:6px;"></div>
+
+          <div id="nextTriggerBuy" class="v">-</div>
+          <div id="nextTriggerBuySub" class="k" style="margin-top:4px;">-</div>
+        </div>
+
+        <div class="m">
+          <div class="k">Letzte Strategie-Änderung</div>
+          <div id="lastTrade" class="v">-</div>
+          <div id="lastTradeSub" class="k" style="margin-top:4px;">-</div>
+        </div>
+
+        <div class="m">
+          <div class="k">Zielquote (grob)</div>
+          <div id="ladderHint" class="v">-</div>
+          <div class="k" style="margin-top:4px;">bei Ratio 50 / 70 / 90</div>
+        </div>
+
+        <div class="m">
+          <div class="k">vs HODL (seit Start)</div>
+          <div id="perfDiff" class="v">-</div>
+          <div id="perfSub" class="k" style="margin-top:4px;">-</div>
+        </div>
+      </div>
+
+      <!-- CHARTS -->
+      <div class="chartsGrid">
+        <div class="subcard">
+          <div class="subhead">
+            <div class="t">BTC-Exposure nach Kanal-Position (Ratio)</div>
+            <div id="expoHint" class="s">-</div>
+          </div>
+          <div id="expoChart"></div>
+        </div>
+
+        <div class="subcard">
+          <div class="subhead">
+            <div class="t">Exposure & Performance seit Start</div>
+            <div id="perfTiny" class="s">-</div>
+          </div>
+          <div id="strategyChart"></div>
+        </div>
+      </div>
+
+      <!-- DISTRIBUTION -->
+      <div class="subcard" style="margin-top:12px;">
+        <div class="subhead">
+          <div class="t">Verteilung der Kanal-Position (seit Start)</div>
+          <div id="distHint" class="s">-</div>
+        </div>
+        <div id="distChart"></div>
+      </div>
+    </div>
+
+    <!-- NOTE: Der alte "MAIN CHART"-Block wurde entfernt, weil der Chart jetzt im Herleitungs-Block oben sitzt. -->
+
+  </div>
+
+  <!-- Wichtig: type="module" -->
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>
