@@ -172,10 +172,13 @@ show_summary() {
     echo "  - Disable:      sudo systemctl disable ${SERVICE_NAME}"
     echo ""
     echo "Web interface: http://127.0.0.1:8501"
+    echo "HTTPS access: See REVERSE_PROXY_SETUP.md"
     echo ""
     echo "For deployment: sudo ./run.sh"
     echo ""
-    echo "Documentation: SERVICE_INSTALLATION.md"
+    echo "Documentation:"
+    echo "  - SERVICE_INSTALLATION.md"
+    echo "  - REVERSE_PROXY_SETUP.md"
     echo "========================================"
 }
 
