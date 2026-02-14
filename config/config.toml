@@ -1,0 +1,48 @@
+# BTC Dashboard Configuration
+
+[channel]
+# Power law exponent for fair value calculation
+B_EXP = 5.93
+# Genesis date for Bitcoin
+GENESIS_DATE = "2009-01-03"
+# Historical data start date
+DATA_START = "2013-01-01"
+
+[peak_detection]
+# Peak/trough detection parameters for scipy.signal.find_peaks
+PROMINENCE = 0.28
+DISTANCE = 600
+WIDTH = 5
+
+[price_feed]
+# Binance WebSocket URL
+BINANCE_WS_URL = "wss://stream.binance.com:9443/ws/btcusdt@trade"
+# Coinbase REST API URL
+COINBASE_API_URL = "https://api.coinbase.com/v2/prices/BTC-USD/spot"
+# Watchdog timeout in seconds
+WATCHDOG_TIMEOUT = 20
+# Fallback check interval in seconds
+FALLBACK_INTERVAL = 8
+
+[data_source]
+# CoinCodex API URL pattern
+COINCODEX_API_URL = "https://coincodex.com/api/coincodex/get_coin_history/BTC/{start}/{end}/{samples}"
+# Request timeout in seconds
+REQUEST_TIMEOUT = 30
+# Chunk size for data requests in days
+CHUNK_DAYS = 120
+
+[strategy]
+# Default strategy parameters
+DEFAULT_LADDER = "g1"
+DEFAULT_SELL_START = 46.0
+DEFAULT_BUY_THRESHOLD = 14.0
+DEFAULT_REENTRY_MODE = "instant"
+DEFAULT_START_WEIGHT = 100.0
+DEFAULT_START_DATE = "2018-01-01"
+
+[cache]
+# Cache TTL for channel data in seconds
+CHANNEL_DATA_TTL = 3600
+# Cache TTL for backtest results in seconds
+BACKTEST_TTL = 300
