@@ -11,22 +11,43 @@ This guide explains how to install and configure the `btc-dashboard.service` sys
 
 ## Quick Installation
 
-Run these commands as the `pi` user or with `sudo`:
+### Automated Installation (Recommended)
+
+The easiest way to install the service is using the provided installation script:
 
 ```bash
-# 1. Copy the service file to systemd directory
+cd /home/pi/btc-dashboard
+sudo ./install-service.sh
+```
+
+The script will automatically:
+- Check system prerequisites (Python, systemd)
+- Install Python dependencies if not already present
+- Install and configure the systemd service
+- Enable auto-start on boot
+- Start the service
+
+### Manual Installation
+
+Alternatively, you can install manually:
+
+```bash
+# 1. Install Python dependencies
+python3 -m pip install -r requirements.txt
+
+# 2. Copy the service file to systemd directory
 sudo cp /home/pi/btc-dashboard/btc-dashboard.service /etc/systemd/system/
 
-# 2. Reload systemd to recognize the new service
+# 3. Reload systemd to recognize the new service
 sudo systemctl daemon-reload
 
-# 3. Enable the service to start on boot
+# 4. Enable the service to start on boot
 sudo systemctl enable btc-dashboard.service
 
-# 4. Start the service immediately
+# 5. Start the service immediately
 sudo systemctl start btc-dashboard.service
 
-# 5. Verify the service is running
+# 6. Verify the service is running
 sudo systemctl status btc-dashboard.service
 ```
 
@@ -157,6 +178,8 @@ sudo journalctl -u btc-dashboard.service -n 100 --no-pager
    ```
 
 2. **Python dependencies missing**
+
+   If you used the automated installation script (`install-service.sh`), dependencies should already be installed. If you installed manually or encounter this error, install them with:
    ```bash
    cd /home/pi/btc-dashboard
    python3 -m pip install -r requirements.txt
