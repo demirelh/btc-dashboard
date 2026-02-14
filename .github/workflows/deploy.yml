@@ -1,37 +1,30 @@
-name: Deploy to Production
+name: Deploy
 
 on:
   push:
-    branches:
-      - main
-  workflow_dispatch:
+    branches: ["main"]
+  workflow_dispatch: {}
 
 concurrency:
-  group: production-deployment
-  cancel-in-progress: false
+  group: deploy-main
+  cancel-in-progress: true
 
 jobs:
   deploy:
-    name: SSH Deploy to Linux Server
     runs-on: ubuntu-latest
-
     steps:
-      - name: Setup SSH key
+      - name: Setup SSH
+        shell: bash
         run: |
+          set -euo pipefail
           mkdir -p ~/.ssh
-          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-
-      - name: Add server to known hosts
-        run: |
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -p 22 lnodebtc.duckdns.org >> ~/.ssh/known_hosts
-          chmod 644 ~/.ssh/known_hosts
 
-      - name: Deploy application
+      - name: Run deploy script
+        shell: bash
         run: |
-          ssh -i ~/.ssh/deploy_key -p 22 pi@lnodebtc.duckdns.org "bash /home/pi/btc-dashboard/run.sh"
-
-      - name: Cleanup SSH key
-        if: always()
-        run: |
-          rm -f ~/.ssh/deploy_key
+          set -euo pipefail
+          ssh -p 22 -i ~/.ssh/id_ed25519 pi@lnodebtc.duckdns.org \
+            "bash /home/pi/btc-dashboard/run.sh"
