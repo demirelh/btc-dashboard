@@ -1,0 +1,23 @@
+[Unit]
+Description=BTC Dashboard Streamlit Application
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/path/to/btc-dashboard
+Environment="PATH=/path/to/venv/bin:/usr/local/bin:/usr/bin:/bin"
+ExecStart=/path/to/venv/bin/streamlit run app.py --server.port=8501 --server.address=127.0.0.1
+Restart=always
+RestartSec=10
+
+# Security hardening
+PrivateTmp=yes
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/path/to/btc-dashboard
+
+[Install]
+WantedBy=multi-user.target
