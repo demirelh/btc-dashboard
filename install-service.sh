@@ -85,9 +85,53 @@ check_service_file() {
     log_success "Service file found: ${SERVICE_FILE}"
 }
 
+check_requirements_file() {
+    if [ ! -f "${SCRIPT_DIR}/requirements.txt" ]; then
+        log_error "requirements.txt not found: ${SCRIPT_DIR}/requirements.txt"
+        log_error "Make sure you're running this script from the btc-dashboard directory"
+        exit 1
+    fi
+    log_success "Requirements file found: ${SCRIPT_DIR}/requirements.txt"
+}
+
+check_streamlit_installed() {
+    if ! python3 -c "import streamlit" &> /dev/null; then
+        return 1
+    fi
+    return 0
+}
+
 ################################################################################
 # Installation Functions
 ################################################################################
+
+install_dependencies() {
+    log_info "Checking Python dependencies..."
+
+    if check_streamlit_installed; then
+        log_success "Python dependencies already installed"
+        return 0
+    fi
+
+    log_warn "Streamlit not found in system Python"
+    log_info "Installing Python dependencies from requirements.txt..."
+
+    # Install dependencies
+    if python3 -m pip install --upgrade pip &> /dev/null; then
+        log_success "pip upgraded"
+    else
+        log_warn "Could not upgrade pip (continuing anyway)"
+    fi
+
+    if python3 -m pip install -r "${SCRIPT_DIR}/requirements.txt"; then
+        log_success "Python dependencies installed"
+    else
+        log_error "Failed to install Python dependencies"
+        log_error "You may need to install them manually:"
+        log_error "  python3 -m pip install -r requirements.txt"
+        exit 1
+    fi
+}
 
 backup_existing_service() {
     local installed_service="${SYSTEMD_DIR}/${SERVICE_NAME}"
@@ -198,12 +242,14 @@ main() {
     check_systemd
     check_python
     check_service_file
+    check_requirements_file
     echo ""
 
     # Installation steps
     log_info "Starting installation..."
     echo ""
 
+    install_dependencies
     backup_existing_service
     install_service
     reload_systemd
