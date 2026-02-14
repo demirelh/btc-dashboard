@@ -64,7 +64,7 @@ The Streamlit application should be accessible at:
 http://127.0.0.1:8501
 ```
 
-If you need external access, set up a reverse proxy (nginx/apache).
+For external HTTPS access through a reverse proxy (e.g., https://lnodebtc.duckdns.org/), see [REVERSE_PROXY_SETUP.md](./REVERSE_PROXY_SETUP.md).
 
 ## Service Configuration Details
 
@@ -74,7 +74,7 @@ If you need external access, set up a reverse proxy (nginx/apache).
 |----------|-------|-------------|
 | **User** | `pi` | User account running the service |
 | **Working Directory** | `/home/pi/btc-dashboard` | Application root directory |
-| **ExecStart** | `python3 -m streamlit run app.py` | Command to start the application |
+| **ExecStart** | `python3 -m streamlit run app.py --server.enableCORS=false --server.enableXsrfProtection=false` | Command to start the application with reverse proxy support |
 | **Port** | `8501` | Streamlit default port |
 | **Address** | `127.0.0.1` | Binds to localhost only (secure by default) |
 | **Restart** | `always` | Automatically restarts on failure |

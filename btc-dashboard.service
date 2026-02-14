@@ -8,7 +8,7 @@ User=pi
 Group=pi
 WorkingDirectory=/home/pi/btc-dashboard
 Environment="PATH=/usr/local/bin:/usr/bin:/bin"
-ExecStart=/usr/bin/python3 -m streamlit run app.py --server.port=8501 --server.address=127.0.0.1 --server.headless=true
+ExecStart=/usr/bin/python3 -m streamlit run app.py --server.port=8501 --server.address=127.0.0.1 --server.headless=true --server.enableCORS=false --server.enableXsrfProtection=false
 Restart=always
 RestartSec=10
 StandardOutput=journal

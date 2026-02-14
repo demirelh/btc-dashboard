@@ -8,6 +8,10 @@ font = "sans serif"
 [server]
 headless = true
 port = 8501
+# Enable CORS to allow requests from the HTTPS domain
+enableCORS = false
+# Disable XSRF protection when behind reverse proxy
+enableXsrfProtection = false
 
 [browser]
 gatherUsageStats = false
