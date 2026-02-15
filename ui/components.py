@@ -8,6 +8,12 @@ from core.utils import format_number, format_usd, format_pct
 from ui.theme import get_plotly_theme, get_chart_colors
 
 
+def _base_theme():
+    """Return plotly theme without xaxis/yaxis to avoid duplicate keyword args."""
+    theme = get_plotly_theme()
+    return {k: v for k, v in theme.items() if k not in ("xaxis", "yaxis")}
+
+
 def render_kpi_cards(
     channel_data: ChannelData,
     live_price: Optional[LivePrice] = None,
@@ -120,7 +126,7 @@ def plot_channel_chart(channel_data: ChannelData) -> go.Figure:
 
     # Update layout
     fig.update_layout(
-        **theme,
+        **_base_theme(),
         yaxis=dict(
             title="Price (USD)",
             type="log",
@@ -178,7 +184,7 @@ def plot_ratio_chart(channel_data: ChannelData) -> go.Figure:
     )
 
     fig.update_layout(
-        **theme,
+        **_base_theme(),
         yaxis=dict(title="Ratio (%)", range=[0, 100], dtick=10, **theme["yaxis"]),
         xaxis=dict(title="Date", **theme["xaxis"]),
         height=300,
@@ -243,7 +249,7 @@ def plot_exposure_curve(
     )
 
     fig.update_layout(
-        **theme,
+        **_base_theme(),
         yaxis=dict(title="BTC Exposure (%)", range=[0, 100], **theme["yaxis"]),
         xaxis=dict(title="Kanal-Position / Ratio (%)", range=[0, 100], **theme["xaxis"]),
         legend=dict(
@@ -310,7 +316,7 @@ def plot_backtest_results(backtest: BacktestResult) -> go.Figure:
     )
 
     fig.update_layout(
-        **theme,
+        **_base_theme(),
         yaxis=dict(title="BTC Weight (%)", range=[0, 100], **theme["yaxis"]),
         yaxis2=dict(
             title="Equity (relative)",
@@ -413,7 +419,7 @@ def plot_ratio_distribution(
     title_text = f"Since {start_date} | n={n} | μ={mean:.1f} | σ={std:.1f}" if start_date else f"n={n} | μ={mean:.1f} | σ={std:.1f}"
 
     fig.update_layout(
-        **theme,
+        **_base_theme(),
         yaxis=dict(title="Frequency", **theme["yaxis"]),
         xaxis=dict(
             title="Kanal-Position (%)",
