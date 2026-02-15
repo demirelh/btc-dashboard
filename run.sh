@@ -188,6 +188,9 @@ install_dependencies() {
 restart_service() {
     log "Restarting systemd service: ${SERVICE_NAME}"
 
+    # Clear any start-limit failures from previous runs
+    sudo systemctl reset-failed "${SERVICE_NAME}" 2>/dev/null || true
+
     # Check if service is active
     if systemctl is-active --quiet "${SERVICE_NAME}"; then
         log "Service is currently active, restarting..."
