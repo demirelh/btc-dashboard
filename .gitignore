@@ -26,6 +26,10 @@ env/
 ENV/
 .venv/
 
+# Installation scripts temporary files
+.btc-dashboard.service.tmp
+.requirements.checksum
+
 # IDE
 .vscode/
 .idea/

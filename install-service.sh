@@ -28,6 +28,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SERVICE_FILE="${SCRIPT_DIR}/btc-dashboard.service"
 SYSTEMD_DIR="/etc/systemd/system"
 SERVICE_NAME="btc-dashboard.service"
+VENV_DIR="${SCRIPT_DIR}/.venv"
 
 ################################################################################
 # Helper Functions
@@ -95,10 +96,28 @@ check_requirements_file() {
 }
 
 check_streamlit_installed() {
-    if ! python3 -c "import streamlit" &> /dev/null; then
+    local python_bin="${1:-python3}"
+    if ! "${python_bin}" -c "import streamlit" &> /dev/null; then
         return 1
     fi
     return 0
+}
+
+create_venv() {
+    if [ -d "${VENV_DIR}" ]; then
+        log_success "Virtual environment already exists at ${VENV_DIR}"
+        return 0
+    fi
+
+    log_info "Creating virtual environment at ${VENV_DIR}..."
+
+    if python3 -m venv "${VENV_DIR}"; then
+        log_success "Virtual environment created"
+    else
+        log_error "Failed to create virtual environment"
+        log_error "Make sure python3-venv is installed: sudo apt install python3-venv"
+        exit 1
+    fi
 }
 
 ################################################################################
@@ -108,27 +127,35 @@ check_streamlit_installed() {
 install_dependencies() {
     log_info "Checking Python dependencies..."
 
-    if check_streamlit_installed; then
+    # Ensure virtual environment exists
+    create_venv
+
+    local venv_python="${VENV_DIR}/bin/python"
+    local venv_pip="${VENV_DIR}/bin/pip"
+
+    if check_streamlit_installed "${venv_python}"; then
         log_success "Python dependencies already installed"
         return 0
     fi
 
-    log_warn "Streamlit not found in system Python"
+    log_warn "Streamlit not found in virtual environment"
     log_info "Installing Python dependencies from requirements.txt..."
 
-    # Install dependencies
-    if python3 -m pip install --upgrade pip &> /dev/null; then
-        log_success "pip upgraded"
+    # Upgrade pip in virtual environment
+    if "${venv_pip}" install --upgrade pip &> /dev/null; then
+        log_success "pip upgraded in virtual environment"
     else
         log_warn "Could not upgrade pip (continuing anyway)"
     fi
 
-    if python3 -m pip install -r "${SCRIPT_DIR}/requirements.txt"; then
+    # Install dependencies in virtual environment
+    if "${venv_pip}" install -r "${SCRIPT_DIR}/requirements.txt"; then
         log_success "Python dependencies installed"
     else
         log_error "Failed to install Python dependencies"
         log_error "You may need to install them manually:"
-        log_error "  python3 -m pip install -r requirements.txt"
+        log_error "  source ${VENV_DIR}/bin/activate"
+        log_error "  pip install -r requirements.txt"
         exit 1
     fi
 }
@@ -156,9 +183,26 @@ backup_existing_service() {
 install_service() {
     log_info "Installing service file..."
 
-    # Copy service file to systemd directory
-    cp "${SERVICE_FILE}" "${SYSTEMD_DIR}/"
+    # Create a temporary service file with updated paths
+    local temp_service="${SCRIPT_DIR}/.btc-dashboard.service.tmp"
+
+    # Read the service file and update paths line by line
+    while IFS= read -r line; do
+        if [[ "$line" =~ ^Environment=\"PATH= ]]; then
+            echo "Environment=\"PATH=${VENV_DIR}/bin:/usr/local/bin:/usr/bin:/bin\""
+        elif [[ "$line" =~ ^ExecStart= ]]; then
+            echo "$line" | sed "s|/usr/bin/python3|${VENV_DIR}/bin/python|"
+        else
+            echo "$line"
+        fi
+    done < "${SERVICE_FILE}" > "${temp_service}"
+
+    # Copy modified service file to systemd directory
+    cp "${temp_service}" "${SYSTEMD_DIR}/${SERVICE_NAME}"
     chmod 644 "${SYSTEMD_DIR}/${SERVICE_NAME}"
+
+    # Clean up temporary file
+    rm -f "${temp_service}"
 
     log_success "Service file installed to ${SYSTEMD_DIR}/${SERVICE_NAME}"
 }
