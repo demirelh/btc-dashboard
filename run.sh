@@ -48,6 +48,9 @@ PIP_BIN="${VENV_DIR}/bin/pip"
 # Git branch to pull (can be overridden by environment variable)
 GIT_BRANCH="${GIT_BRANCH:-main}"
 
+# Dashboard port (must match btc-dashboard.service)
+DASHBOARD_PORT="${DASHBOARD_PORT:-8502}"
+
 # Log file
 LOG_FILE="${SCRIPT_DIR}/deployment.log"
 
@@ -218,13 +221,13 @@ restart_service() {
         exit 1
     fi
 
-    # Verify service is actually responding on port 8501
-    log "Verifying service is responding on port 8501..."
+    # Verify service is actually responding on port ${DASHBOARD_PORT}
+    log "Verifying service is responding on port ${DASHBOARD_PORT}..."
     if command -v curl &> /dev/null; then
-        if curl -sf --max-time 5 http://127.0.0.1:8501 > /dev/null 2>&1; then
-            log_success "Service '${SERVICE_NAME}' is running and responding on port 8501"
+        if curl -sf --max-time 5 http://127.0.0.1:${DASHBOARD_PORT} > /dev/null 2>&1; then
+            log_success "Service '${SERVICE_NAME}' is running and responding on port ${DASHBOARD_PORT}"
         else
-            log_error "Service is active but not responding on port 8501"
+            log_error "Service is active but not responding on port ${DASHBOARD_PORT}"
             log "This may indicate a port conflict or application startup failure"
             log "Recent service logs:"
             sudo journalctl -u "${SERVICE_NAME}" --since "30 seconds ago" --no-pager -n 50 || true
