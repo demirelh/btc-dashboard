@@ -194,17 +194,45 @@ restart_service() {
         sudo systemctl start "${SERVICE_NAME}"
     fi
 
-    # Wait a moment for service to start
-    sleep 2
+    # Wait for Streamlit to fully initialize (increased from 2 to 15 seconds)
+    log "Waiting for service to initialize..."
+    sleep 15
 
     # Verify service is running
-    if systemctl is-active --quiet "${SERVICE_NAME}"; then
-        log_success "Service '${SERVICE_NAME}' is running"
-    else
+    if ! systemctl is-active --quiet "${SERVICE_NAME}"; then
         log_error "Service '${SERVICE_NAME}' failed to start"
         log "Checking service status..."
         sudo systemctl status "${SERVICE_NAME}" --no-pager || true
         exit 1
+    fi
+
+    # Check for recent errors in journal
+    log "Checking for errors in service logs..."
+    local error_count
+    error_count=$(sudo journalctl -u "${SERVICE_NAME}" --since "30 seconds ago" --no-pager | grep -iE "(error|failed|exception|traceback)" | wc -l || echo "0")
+
+    if [ "${error_count}" -gt 0 ]; then
+        log_error "Found ${error_count} error(s) in service logs within the last 30 seconds"
+        log "Recent service logs:"
+        sudo journalctl -u "${SERVICE_NAME}" --since "30 seconds ago" --no-pager -n 50 || true
+        exit 1
+    fi
+
+    # Verify service is actually responding on port 8501
+    log "Verifying service is responding on port 8501..."
+    if command -v curl &> /dev/null; then
+        if curl -sf --max-time 5 http://127.0.0.1:8501 > /dev/null 2>&1; then
+            log_success "Service '${SERVICE_NAME}' is running and responding on port 8501"
+        else
+            log_error "Service is active but not responding on port 8501"
+            log "This may indicate a port conflict or application startup failure"
+            log "Recent service logs:"
+            sudo journalctl -u "${SERVICE_NAME}" --since "30 seconds ago" --no-pager -n 50 || true
+            exit 1
+        fi
+    else
+        log "curl not available, skipping port check"
+        log_success "Service '${SERVICE_NAME}' is running"
     fi
 }
 
