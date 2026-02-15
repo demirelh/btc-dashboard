@@ -274,7 +274,7 @@ If you want to use a Python virtual environment:
 2. Update service file (`/etc/systemd/system/btc-dashboard.service`):
    ```ini
    Environment="PATH=/home/pi/btc-dashboard/.venv/bin:/usr/local/bin:/usr/bin:/bin"
-   ExecStart=/home/pi/btc-dashboard/.venv/bin/streamlit run app.py --server.port=8501 --server.address=127.0.0.1 --server.headless=true
+   ExecStart=/home/pi/btc-dashboard/.venv/bin/python -m streamlit run app.py --server.port=8501 --server.address=127.0.0.1 --server.headless=true
    ```
 
 3. Reload and restart:
