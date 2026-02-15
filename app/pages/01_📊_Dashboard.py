@@ -63,7 +63,7 @@ st.markdown(
 )
 
 fig = plot_channel_chart(channel_data)
-st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(fig, width="stretch")
 
 # Ratio indicator
 st.markdown("### Channel Position Indicator")
@@ -72,7 +72,7 @@ st.markdown(
 )
 
 ratio_fig = plot_ratio_chart(channel_data)
-st.plotly_chart(ratio_fig, use_container_width=True)
+st.plotly_chart(ratio_fig, width="stretch")
 
 # Info section
 with st.expander("ℹ️ About the Channel Model"):

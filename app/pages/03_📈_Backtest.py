@@ -184,7 +184,7 @@ st.markdown(
 )
 
 backtest_fig = plot_backtest_results(result)
-st.plotly_chart(backtest_fig, use_container_width=True)
+st.plotly_chart(backtest_fig, width="stretch")
 
 # Last trade info
 if result.last_trade:

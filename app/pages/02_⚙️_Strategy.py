@@ -181,7 +181,7 @@ for r in ratios:
 exposure_fig = plot_exposure_curve(
     ratios, weights, sell_start, current_ratio, current_weight * 100
 )
-st.plotly_chart(exposure_fig, use_container_width=True)
+st.plotly_chart(exposure_fig, width="stretch")
 
 st.markdown("---")
 
@@ -198,7 +198,7 @@ if len(ratios_slice) > 1:
     dist_fig = plot_ratio_distribution(
         ratios_slice, current_ratio, str(start_date)
     )
-    st.plotly_chart(dist_fig, use_container_width=True)
+    st.plotly_chart(dist_fig, width="stretch")
 else:
     st.warning("Not enough data for distribution analysis")
 
