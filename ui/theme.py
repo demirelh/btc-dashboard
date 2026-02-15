@@ -56,7 +56,7 @@ def apply_custom_theme():
 
         /* Sidebar styling */
         section[data-testid="stSidebar"] {
-            background: var(--card);
+            background: var(--bg1) !important;
             border-right: 1px solid var(--border);
         }
 
