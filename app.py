@@ -40,23 +40,40 @@ try:
     channel_data = load_channel_data()
 
     if channel_data:
+        # Get live price
+        price_feed = get_price_feed()
+        live_price = price_feed.get_latest_price()
+
         st.markdown("### Quick Overview")
 
-        col1, col2, col3 = st.columns(3)
+        col1, col2, col3, col4 = st.columns(4)
 
         with col1:
+            if live_price:
+                st.metric(
+                    "Live Price",
+                    f"${live_price.price:,.0f}",
+                    delta=f"via {live_price.source}",
+                )
+            else:
+                st.metric(
+                    "Last Close Price",
+                    f"${channel_data.last_close:,.0f}",
+                )
+
+        with col2:
             st.metric(
-                "Last Close Price",
+                "Last Close",
                 f"${channel_data.last_close:,.0f}",
             )
 
-        with col2:
+        with col3:
             st.metric(
                 "Channel Position",
                 f"{channel_data.last_ratio:.1f}%",
             )
 
-        with col3:
+        with col4:
             st.metric(
                 "Data Through",
                 channel_data.last_date,
