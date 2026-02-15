@@ -239,6 +239,7 @@ main() {
     # Pre-installation checks
     log_info "Running pre-installation checks..."
     check_root
+    source .venv/bin/activate
     check_systemd
     check_python
     check_service_file
