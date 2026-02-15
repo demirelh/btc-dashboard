@@ -35,11 +35,15 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "${SCRIPT_DIR}"
 
+# Virtual environment directory
+VENV_DIR="${SCRIPT_DIR}/.venv"
+
 # Service name (adjust if your systemd service has a different name)
 SERVICE_NAME="${SERVICE_NAME:-btc-dashboard.service}"
 
 # Python executable (can be overridden by environment variable)
-PYTHON_BIN="${PYTHON_BIN:-python3}"
+PYTHON_BIN="${PYTHON_BIN:-${VENV_DIR}/bin/python}"
+PIP_BIN="${VENV_DIR}/bin/pip"
 
 # Git branch to pull (can be overridden by environment variable)
 GIT_BRANCH="${GIT_BRANCH:-main}"
@@ -82,9 +86,15 @@ check_git_repo() {
 }
 
 check_python() {
+    if [ ! -d "${VENV_DIR}" ]; then
+        log_error "Virtual environment not found at ${VENV_DIR}"
+        log_error "Please run install-service.sh first to create the virtual environment"
+        exit 1
+    fi
+
     if ! command -v "${PYTHON_BIN}" &> /dev/null; then
         log_error "Python not found: ${PYTHON_BIN}"
-        log_error "Please install Python 3.x or set PYTHON_BIN environment variable"
+        log_error "Please run install-service.sh first to set up the environment"
         exit 1
     fi
     local python_version
@@ -161,10 +171,10 @@ install_dependencies() {
         log "First run or checksum missing, installing dependencies..."
     fi
 
-    # Install/update dependencies
+    # Install/update dependencies in virtual environment
     log "Installing Python dependencies..."
-    "${PYTHON_BIN}" -m pip install --upgrade pip
-    "${PYTHON_BIN}" -m pip install -r requirements.txt
+    "${PIP_BIN}" install --upgrade pip
+    "${PIP_BIN}" install -r requirements.txt
 
     # Save new checksum
     echo "${current_checksum}" > "${req_checksum_file}"
