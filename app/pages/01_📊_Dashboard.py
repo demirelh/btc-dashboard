@@ -1,6 +1,5 @@
 """Dashboard page - Live KPIs and main channel chart."""
 import streamlit as st
-import time
 
 from core.data_store import load_channel_data
 from core.price_feed import get_price_feed
@@ -46,13 +45,16 @@ if not channel_data:
     )
     st.stop()
 
-# Get live price (non-cached, updated in real-time)
-price_feed = get_price_feed()
-live_price = price_feed.get_latest_price()
+# Auto-refreshing KPI section (every 10s)
+@st.fragment(run_every=10)
+def live_kpis():
+    """KPI cards with live price auto-refresh."""
+    price_feed = get_price_feed()
+    live_price = price_feed.get_latest_price()
+    st.markdown("### Key Performance Indicators")
+    render_kpi_cards(channel_data, live_price)
 
-# Render KPI cards
-st.markdown("### Key Performance Indicators")
-render_kpi_cards(channel_data, live_price)
+live_kpis()
 
 st.markdown("---")
 
@@ -106,7 +108,3 @@ with st.expander("ℹ️ About the Channel Model"):
         """
     )
 
-# Auto-refresh live price (optional)
-if st.checkbox("Enable auto-refresh (5 seconds)", value=False):
-    time.sleep(5)
-    st.rerun()
