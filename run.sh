@@ -212,7 +212,7 @@ restart_service() {
     # Check for recent errors in journal
     log "Checking for errors in service logs..."
     local error_count
-    error_count=$(sudo journalctl -u "${SERVICE_NAME}" --since "30 seconds ago" --no-pager | grep -iE "(error|failed|exception|traceback)" | wc -l || echo "0")
+    error_count=$(sudo journalctl -u "${SERVICE_NAME}" --since "30 seconds ago" --no-pager | grep -ciE "(error|failed|exception|traceback)" || true)
 
     if [ "${error_count}" -gt 0 ]; then
         log_error "Found ${error_count} error(s) in service logs within the last 30 seconds"
