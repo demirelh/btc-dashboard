@@ -124,7 +124,7 @@ The installed service (`btc-dashboard.service`) is configured with:
 ### No Virtual Environment
 The service uses **system Python 3** directly. No virtualenv is configured because:
 1. The `btc-dashboard.service` file uses `/usr/bin/python3`
-2. The `Environment="PATH=..."` does not include a venv path
+2. The `Environment="PATH=..."` does not include a .venv path
 3. Dependencies are installed system-wide via `pip install -r requirements.txt`
 
 If you want to use a virtualenv in the future, see the "Advanced Configuration" section in `SERVICE_INSTALLATION.md`.

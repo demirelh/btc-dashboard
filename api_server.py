@@ -6,7 +6,7 @@ import time
 app = Flask(__name__)
 
 TOKEN = os.environ.get("BTC_UPDATE_TOKEN", "")
-PYTHON = "/home/pi/jupyterhub/venv/bin/python"
+PYTHON = "/home/pi/jupyterhub/.venv/bin/python"
 SCRIPT = "/home/pi/btc-dashboard/update.py"
 
 @app.get("/api/health")

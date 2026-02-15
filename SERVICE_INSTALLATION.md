@@ -263,18 +263,18 @@ sudo systemctl restart btc-dashboard.service
 
 If you want to use a Python virtual environment:
 
-1. Create venv:
+1. Create .venv:
    ```bash
    cd /home/pi/btc-dashboard
-   python3 -m venv venv
-   source venv/bin/activate
+   python3 -m venv .venv
+   source .venv/bin/activate
    pip install -r requirements.txt
    ```
 
 2. Update service file (`/etc/systemd/system/btc-dashboard.service`):
    ```ini
-   Environment="PATH=/home/pi/btc-dashboard/venv/bin:/usr/local/bin:/usr/bin:/bin"
-   ExecStart=/home/pi/btc-dashboard/venv/bin/streamlit run app.py --server.port=8501 --server.address=127.0.0.1 --server.headless=true
+   Environment="PATH=/home/pi/btc-dashboard/.venv/bin:/usr/local/bin:/usr/bin:/bin"
+   ExecStart=/home/pi/btc-dashboard/.venv/bin/python -m streamlit run app.py --server.port=8501 --server.address=127.0.0.1 --server.headless=true
    ```
 
 3. Reload and restart:

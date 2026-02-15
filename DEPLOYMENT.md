@@ -47,8 +47,8 @@ Type=simple
 User=www-data
 Group=www-data
 WorkingDirectory=/path/to/btc-dashboard
-Environment="PATH=/path/to/venv/bin:/usr/local/bin:/usr/bin:/bin"
-ExecStart=/path/to/venv/bin/streamlit run app.py --server.port=8501 --server.address=127.0.0.1
+Environment="PATH=/path/to/.venv/bin:/usr/local/bin:/usr/bin:/bin"
+ExecStart=/path/to/.venv/bin/python -m streamlit run app.py --server.port=8501 --server.address=127.0.0.1
 Restart=always
 RestartSec=10
 
@@ -63,7 +63,7 @@ ReadWritePaths=/path/to/btc-dashboard
 WantedBy=multi-user.target
 ```
 
-**Important**: Replace `/path/to/btc-dashboard` and `/path/to/venv/bin` with actual paths.
+**Important**: Replace `/path/to/btc-dashboard` and `/path/to/.venv/bin` with actual paths.
 
 #### Step 3: Enable and start the service
 
