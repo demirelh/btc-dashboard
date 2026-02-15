@@ -119,10 +119,12 @@ def apply_custom_theme():
             color: var(--text) !important;
         }
 
-        /* Hide Streamlit branding */
+        /* Hide Streamlit branding but keep header for mobile hamburger menu */
         #MainMenu {visibility: hidden;}
         footer {visibility: hidden;}
-        header {visibility: hidden;}
+        header[data-testid="stHeader"] {
+            background: transparent !important;
+        }
 
         /* Custom metric cards */
         .metric-card {
